@@ -4,7 +4,7 @@ const appConfig = require('./config');
 const config = {
     user: appConfig.DB.user,
     password: appConfig.DB.password,
-    server: appConfig.DB.database,
+    server: appConfig.DB.server,
     database: appConfig.DB.database
 };
 
