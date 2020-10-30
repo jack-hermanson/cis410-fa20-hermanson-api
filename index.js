@@ -5,8 +5,45 @@ const db = require('./dbConnectExec');
 
 app.use(express.json());
 
-app.get('/hi', (req, res) => {
-    res.send("hello world");
+/**
+ * ROUTES
+ */
+
+// CUSTOMERS
+
+// get existing customers
+app.get('/customers', async (req, res) => {
+    const query = `SELECT c.CustomerId, c.FirstName, c.LastName, c.Email, c.Phone
+    FROM CUSTOMER as c;`
+
+    const result = await db.executeQuery(query)
+        .catch(err => {
+            console.log(err);
+            return res.status(500).send();
+        });
+
+    return res.status(200).send(result);
+});
+
+// get a specific customer
+app.get('/customers/:pk', async (req, res) => {
+    const pk = req.params.pk.replace("'", "").replace(";", "");
+
+    const query = `SELECT c.CustomerId, c.FirstName, c.LastName, c.Email, c.Phone
+    FROM CUSTOMER as c
+    WHERE c.CustomerId = ${pk};`;
+
+    result = await db.executeQuery(query)
+        .catch(err => {
+            console.log(err);
+            return res.status(500).send();
+        });
+    
+    if (result[0]) {
+        return res.status(200).send(result[0]);
+    } else {
+        return res.status(404).send("Not found")
+    }
 });
 
 // create a new customer
@@ -47,6 +84,8 @@ app.post('/customers', async (req, res) => {
         });
 });
 
+// PURCHASES
+
 // get purchases made by customers
 app.get('/purchases', (req, res) => {
     db.executeQuery(`SELECT p.PurchaseId, p.DateOfPurchase, p.Amount, s.Name, c.CustomerId, c.FirstName, c.LastName, c.Phone, c.Email
@@ -68,7 +107,7 @@ app.get('/purchases', (req, res) => {
 
 // get a specific purchase
 app.get('/purchases/:pk', (req, res) => {
-    const pk = req.params.pk;
+    const pk = req.params.pk.replace("'", "").replace(";", "");
 
     const query = `SELECT p.PurchaseId, p.DateOfPurchase, p.Amount, s.Name, c.CustomerId, c.FirstName, c.LastName, c.Phone, c.Email
     FROM "Purchase" AS p
@@ -85,7 +124,7 @@ app.get('/purchases/:pk', (req, res) => {
             if (purchases[0]) {
                 res.status(200).send(purchases[0])
             } else {
-                res.status(404).send('Bad request');
+                res.status(404).send("Not found");
             }
         })
         .catch(err => {
@@ -93,6 +132,47 @@ app.get('/purchases/:pk', (req, res) => {
             res.status(500).send();
         });
 });
+
+// STRAINS
+
+// get all strains
+app.get('/strains', async (req, res) => {
+    const query = `SELECT * FROM Strain;`;
+
+    const result = await db.executeQuery(query)
+        .catch(err => {
+            console.log(err);
+            return res.status(500).send();
+        });
+    
+    return res.status(200).send(result);
+});
+
+// get a specific strain
+app.get('/strains/:pk', async (req, res) => {
+    const pk = req.params.pk.replace("'", "").replace(";", "");
+
+    const query = `SELECT * FROM Strain
+    WHERE StrainId = ${pk};`;
+
+    const result = await db.executeQuery(query)
+        .catch(err => {
+            console.log(err);
+            return res.status(500).send();
+        })
+    
+    if (result[0]) {
+        return res.status(200).send(result[0]);
+    } else {
+        return res.status(404).send("Not found");
+    }
+
+    
+});
+
+/**
+ * RUN APP
+ */
 
 app.listen(5000, () => {
     console.log("app is running");
