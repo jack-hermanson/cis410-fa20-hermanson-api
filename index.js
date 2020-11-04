@@ -4,6 +4,7 @@ const app = express();
 const db = require('./dbConnectExec');
 const config = require('./config');
 const jwt = require('jsonwebtoken');
+const auth = require('./middleware/authenticate')
 
 app.use(express.json());
 
@@ -203,6 +204,23 @@ app.get('/purchases/:pk', (req, res) => {
 });
 
 // STRAINS
+
+// create a new strain
+app.post('/strains', auth, async (req, res) => {
+    let name = req.body.name;
+    let potency = req.body.potency;
+    let ouncePrice = req.body.ouncePrice;
+    let halfPrice = req.body.halfPrice;
+    let quadPrice = req.body.quadPrice;
+    let eighthPrice = req.body.eighthPrice;
+    let gramPrice = req.body.gramPrice;
+
+    if (!name) {
+        return res.status(400).send("Bad request. Did you forget to enter a required parameter?");
+    }
+
+    res.send("here is a response");
+});
 
 // get all strains
 app.get('/strains', async (req, res) => {
