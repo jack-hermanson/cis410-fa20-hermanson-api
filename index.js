@@ -2,6 +2,8 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const app = express();
 const db = require('./dbConnectExec');
+const config = require('./config');
+const jwt = require('jsonwebtoken');
 
 app.use(express.json());
 
@@ -84,6 +86,73 @@ app.post('/customers', async (req, res) => {
         });
 });
 
+// login
+app.post('/customers/login', async (req, res) => {
+
+    // get form stuff
+    const email = req.body.email.replace("'", "''").replace(";", "");
+    const password = req.body.password;
+
+    if (!email || !password) {
+        return res.status(400).send("Bad request. Did you forget to enter something?");
+    }
+
+    // make query
+    const query = `SELECT *
+    FROM Customer
+    WHERE Email = '${email}';`;
+
+    let result;
+    
+    try {
+        result = await db.executeQuery(query);
+    } catch (err) {
+        console.log("error in /customers/login", err);
+        return res.status(500).send();
+    }
+    
+    const badCredentials = "Invalid user credentials.";
+
+    if (!result[0]) {
+        return res.status(400).send(badCredentials);
+    }
+    
+    // check password
+    const user = result[0];
+
+    if (!bcrypt.compareSync(password, user.Password)) {
+        return res.status(400).send(badCredentials);
+    }
+
+    // generate a token
+    const token = jwt.sign(
+        { pk: user.CustomerId },
+        config.JWT,
+        { expiresIn: "60 minutes" }
+    );
+
+    const setTokenQuery = `UPDATE Customer
+    SET Token = '${token}'
+    WHERE CustomerId = ${user.CustomerId};`;
+
+    try {
+        await db.executeQuery(setTokenQuery);
+        return res.status(200).send({
+            token: token,
+            user: {
+                FirstName: user.FirstName,
+                LastName: user.LastName,
+                Email: user.Email,
+                CustomerId: user.CustomerId
+            }
+        });
+    } catch (err) {
+        console.log("Error setting user token", err)
+        return res.status(500).send();
+    }
+
+});
+
 // PURCHASES
 
 // get purchases made by customers
@@ -159,7 +228,7 @@ app.get('/strains/:pk', async (req, res) => {
         .catch(err => {
             console.log(err);
             return res.status(500).send();
-        })
+        });
     
     if (result[0]) {
         return res.status(200).send(result[0]);
