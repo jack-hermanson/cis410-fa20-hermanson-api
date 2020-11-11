@@ -9,7 +9,7 @@ const cors = require('cors');
 const app = express();
 
 app.use(express.json());
-app.use(cors);
+app.use(cors());
 
 /**
  * ROUTES
@@ -17,7 +17,7 @@ app.use(cors);
 
 // TEST
 app.get('/', (req, res) => {
-    res.status(200).send({name: "Jack"});
+    return res.status(200).send({name: "Jack"});
 });
 
 app.get('/hi', (req, res) => {
