@@ -1,0 +1,8 @@
+{
+    "appService.zipIgnorePattern": [
+        "node_modules{,/**}",
+        ".vscode{,/**}"
+    ],
+    "appService.defaultWebAppToDeploy": "/subscriptions/42c9e10e-9269-45ae-bb93-d920e6fb2137/resourceGroups/appsvc_linux_centralus/providers/Microsoft.Web/sites/cis410-fa20-hermanson-api",
+    "appService.deploySubpath": "."
+}

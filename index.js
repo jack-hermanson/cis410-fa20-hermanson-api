@@ -1,16 +1,28 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const app = express();
 const db = require('./dbConnectExec');
 const config = require('./config');
 const jwt = require('jsonwebtoken');
 const auth = require('./middleware/authenticate')
+const cors = require('cors');
+
+const app = express();
 
 app.use(express.json());
+app.use(cors);
 
 /**
  * ROUTES
  */
+
+// TEST
+app.get('/', (req, res) => {
+    res.status(200).send({name: "Jack"});
+});
+
+app.get('/hi', (req, res) => {
+    res.status(200).send("hello world");
+});
 
 // CUSTOMERS
 
@@ -41,7 +53,7 @@ app.get('/customers/:pk', async (req, res) => {
             console.log(err);
             return res.status(500).send();
         });
-    
+
     if (result[0]) {
         return res.status(200).send(result[0]);
     } else {
@@ -104,20 +116,20 @@ app.post('/customers/login', async (req, res) => {
     WHERE Email = '${email}';`;
 
     let result;
-    
+
     try {
         result = await db.executeQuery(query);
     } catch (err) {
         console.log("error in /customers/login", err);
         return res.status(500).send();
     }
-    
+
     const badCredentials = "Invalid user credentials.";
 
     if (!result[0]) {
         return res.status(400).send(badCredentials);
     }
-    
+
     // check password
     const user = result[0];
 
@@ -126,10 +138,12 @@ app.post('/customers/login', async (req, res) => {
     }
 
     // generate a token
-    const token = jwt.sign(
-        { pk: user.CustomerId },
-        config.JWT,
-        { expiresIn: "60 minutes" }
+    const token = jwt.sign({
+            pk: user.CustomerId
+        },
+        config.JWT, {
+            expiresIn: "60 minutes"
+        }
     );
 
     const setTokenQuery = `UPDATE Customer
@@ -152,6 +166,20 @@ app.post('/customers/login', async (req, res) => {
         return res.status(500).send();
     }
 
+});
+
+// logout
+app.post('/customers/logout', auth, (req, res) => {
+    const query = `UPDATE Customer
+    SET Token = NULL
+    WHERE CustomerId = ${req.customer.CustomerId}`;
+
+    db.executeQuery(query)
+        .then(() => res.status(200).send())
+        .catch(error => {
+            console.log('error in POST /customers/logout', error);
+            res.status(500).send();
+        });
 });
 
 // PURCHASES
@@ -207,19 +235,30 @@ app.get('/purchases/:pk', (req, res) => {
 
 // create a new strain
 app.post('/strains', auth, async (req, res) => {
-    let name = req.body.name;
-    let potency = req.body.potency;
-    let ouncePrice = req.body.ouncePrice;
-    let halfPrice = req.body.halfPrice;
-    let quadPrice = req.body.quadPrice;
-    let eighthPrice = req.body.eighthPrice;
-    let gramPrice = req.body.gramPrice;
 
-    if (!name) {
-        return res.status(400).send("Bad request. Did you forget to enter a required parameter?");
+    try {
+        let name = req.body.name.replace("'", "''");
+        let potency = req.body.potency;
+        let ouncePrice = req.body.ouncePrice;
+        let halfPrice = req.body.halfPrice;
+        let quadPrice = req.body.quadPrice;
+        let eighthPrice = req.body.eighthPrice;
+        let gramPrice = req.body.gramPrice;
+
+        if (!name || !potency || !ouncePrice || !halfPrice || !quadPrice || !eighthPrice || !gramPrice) {
+            return res.status(400).send("Bad request. Did you forget to enter a required parameter?");
+        }
+
+        const insertQuery = `INSERT INTO Strain(Name, Potency, OuncePrice, HalfPrice, QuadPrice, EighthPrice, GramPrice)
+        VALUES('${name}', ${potency}, ${ouncePrice}, ${halfPrice}, ${quadPrice}, ${eighthPrice}, ${gramPrice});`;
+
+        const insertedStrain = await db.executeQuery(insertQuery);
+        res.status(201).send(insertedStrain[0]);
+
+    } catch (err) {
+        console.log("error in POST /review", error);
+        res.status(500).send();
     }
-
-    res.send("here is a response");
 });
 
 // get all strains
@@ -231,7 +270,7 @@ app.get('/strains', async (req, res) => {
             console.log(err);
             return res.status(500).send();
         });
-    
+
     return res.status(200).send(result);
 });
 
@@ -247,20 +286,20 @@ app.get('/strains/:pk', async (req, res) => {
             console.log(err);
             return res.status(500).send();
         });
-    
+
     if (result[0]) {
         return res.status(200).send(result[0]);
     } else {
         return res.status(404).send("Not found");
     }
 
-    
+
 });
 
 /**
  * RUN APP
  */
-
-app.listen(5000, () => {
-    console.log("app is running");
+const PORT = process.env.PORT || 5000
+app.listen(PORT, () => {
+    console.log(`App is running on port ${PORT}.`);
 });
