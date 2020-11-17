@@ -168,6 +168,12 @@ app.post('/customers/login', async (req, res) => {
 
 });
 
+// get user's information
+app.get('/me', auth, (req, res) => {
+    
+    res.send(req.customer);
+});
+
 // logout
 app.post('/customers/logout', auth, (req, res) => {
     const query = `UPDATE Customer
