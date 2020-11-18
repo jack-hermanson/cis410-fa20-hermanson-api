@@ -77,7 +77,7 @@ app.post('/customers', async (req, res) => {
     }
 
     firstName = firstName.replace("'", "''");
-    lastName  .lastName.replace("'", "''");
+    lastName = lastName.replace("'", "''");
     phone = phone.replace("'", "''");
     email = email.replace("'", "''");
 
@@ -93,10 +93,11 @@ app.post('/customers', async (req, res) => {
     // create a new user
     const hashedPassword = bcrypt.hashSync(password)
     const insertQuery = `INSERT INTO Customer(FirstName, LastName, Phone, Email, Password)
+    OUTPUT inserted.CustomerId, inserted.FirstName, inserted.LastName, inserted.Phone, inserted.Email
     VALUES('${firstName}', '${lastName}', '${phone}', '${email}', '${hashedPassword}');`;
     db.executeQuery(insertQuery)
-        .then(() => {
-            res.status(201).send();
+        .then(insertedCustomer => {
+            res.status(201).send(insertedCustomer[0]);
         })
         .catch(err => {
             console.log("Error in POST /customers", err);
@@ -217,7 +218,7 @@ app.get('/purchases', (req, res) => {
 });
 
 // get a specific purchase
-app.get('/purchases/:pk', auth, (req, res) => {
+app.get('/purchases/:pk', (req, res) => {
     const pk = req.params.pk;
 
     const query = `SELECT p.PurchaseId, p.DateOfPurchase, p.Amount, s.Name, c.CustomerId, c.FirstName, c.LastName, c.Phone, c.Email
