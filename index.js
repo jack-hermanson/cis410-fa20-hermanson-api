@@ -17,7 +17,7 @@ app.use(cors());
 
 // TEST
 app.get('/', (req, res) => {
-    return res.status(200).send({name: "Jack"});
+    return res.status(200).send({message: "Welcome"});
 });
 
 app.get('/hi', (req, res) => {
@@ -42,7 +42,7 @@ app.get('/customers', async (req, res) => {
 
 // get a specific customer
 app.get('/customers/:pk', async (req, res) => {
-    const pk = req.params.pk.replace("'", "").replace(";", "");
+    const pk = req.params.pk;
 
     const query = `SELECT c.CustomerId, c.FirstName, c.LastName, c.Email, c.Phone
     FROM CUSTOMER as c
@@ -65,16 +65,21 @@ app.get('/customers/:pk', async (req, res) => {
 app.post('/customers', async (req, res) => {
 
     // request body
-    const firstName = req.body.firstName.replace("'", "''");
-    const lastName = req.body.lastName.replace("'", "''");
-    const phone = req.body.phone.replace("'", "''");
-    const email = req.body.email.replace("'", "''");
+    let firstName = req.body.firstName;
+    let lastName = req.body.lastName;
+    let phone = req.body.phone;
+    let email = req.body.email;
     const password = req.body.password;
 
     // validation
     if (!firstName || !lastName || !phone || !email || !password) {
         return res.status(400).send("Bad request. Are you missing a required paramater?");
     }
+
+    firstName = firstName.replace("'", "''");
+    lastName  .lastName.replace("'", "''");
+    phone = phone.replace("'", "''");
+    email = email.replace("'", "''");
 
     // check if user with that email already exists
     const checkEmailQuery = `SELECT email
@@ -103,12 +108,14 @@ app.post('/customers', async (req, res) => {
 app.post('/customers/login', async (req, res) => {
 
     // get form stuff
-    const email = req.body.email.replace("'", "''").replace(";", "");
-    const password = req.body.password;
+    let email = req.body.email;
+    let password = req.body.password;
 
     if (!email || !password) {
         return res.status(400).send("Bad request. Did you forget to enter something?");
     }
+
+    email = email.replace("'", "''").replace(";", "");
 
     // make query
     const query = `SELECT *
@@ -210,8 +217,8 @@ app.get('/purchases', (req, res) => {
 });
 
 // get a specific purchase
-app.get('/purchases/:pk', (req, res) => {
-    const pk = req.params.pk.replace("'", "").replace(";", "");
+app.get('/purchases/:pk', auth, (req, res) => {
+    const pk = req.params.pk;
 
     const query = `SELECT p.PurchaseId, p.DateOfPurchase, p.Amount, s.Name, c.CustomerId, c.FirstName, c.LastName, c.Phone, c.Email
     FROM "Purchase" AS p
@@ -237,32 +244,93 @@ app.get('/purchases/:pk', (req, res) => {
         });
 });
 
+// get a user's purchases
+app.get('/purchases/users/:fk', auth, (req, res) => {
+    const fk = req.params.fk;
+
+    const query = `SELECT p.PurchaseId, p.DateOfPurchase, p.Amount, s.Name, s.Potency
+    FROM Purchase AS p
+    INNER JOIN ShelfStrain AS ss ON ss.ShelfStrainId = p.ShelfStrainId
+    INNER JOIN Strain AS s ON s.StrainId = ss.StrainId
+    WHERE p.CustomerId = ${fk};`;
+
+    db.executeQuery(query)
+        .then(purchases => {
+            if (purchases[0]) {
+                res.status(200).send(purchases);
+            } else {
+                res.status(404).send("Not found");
+            }
+        })
+        .catch(err => {
+            console.log("Error in /purchases/users/fk", err);
+            res.status(500).send();
+        })
+});
+
+// create a new purchase
+app.post('/purchases', auth, (req, res) => {
+    try {
+        const shelfStrainId = req.body.shelfStrainId;
+        const customerId = req.customer.CustomerId;
+        const amount = req.body.amount;
+
+        if (!shelfStrainId || !amount) {
+            return res.status(400).send("Bad request.");
+        }
+
+        const insertQuery = `INSERT INTO Purchase(ShelfStrainId, CustomerId, Amount)
+        OUTPUT inserted.PurchaseId, inserted.ShelfStrainId, inserted.CustomerId, inserted.Amount
+        VALUES('${shelfStrainId}', '${customerId}', '${amount}');`;
+        
+        // let insertedPurchase;
+        
+        db.executeQuery(insertQuery)
+            .then(p => res.status(201).send(p[0]))
+            .catch(err => {
+                console.log("Error in post /purchases", err);
+                res.status(500).send();
+            });
+        
+
+        
+    }
+    catch (err) {
+        console.log("Error in /purchases", err)
+        res.status(500).send();
+    }
+});
+
 // STRAINS
 
 // create a new strain
 app.post('/strains', auth, async (req, res) => {
 
     try {
-        let name = req.body.name.replace("'", "''");
-        let potency = req.body.potency;
-        let ouncePrice = req.body.ouncePrice;
-        let halfPrice = req.body.halfPrice;
-        let quadPrice = req.body.quadPrice;
-        let eighthPrice = req.body.eighthPrice;
-        let gramPrice = req.body.gramPrice;
+        let name = req.body.name;
+        const potency = req.body.potency;
+        const ouncePrice = req.body.ouncePrice;
+        const halfPrice = req.body.halfPrice;
+        const quadPrice = req.body.quadPrice;
+        const eighthPrice = req.body.eighthPrice;
+        const gramPrice = req.body.gramPrice;
 
         if (!name || !potency || !ouncePrice || !halfPrice || !quadPrice || !eighthPrice || !gramPrice) {
             return res.status(400).send("Bad request. Did you forget to enter a required parameter?");
         }
 
+        name = name.replace("'", "''");
+
         const insertQuery = `INSERT INTO Strain(Name, Potency, OuncePrice, HalfPrice, QuadPrice, EighthPrice, GramPrice)
+        OUTPUT inserted.StrainId, inserted.Name, inserted.Potency, inserted.HalfPrice, inserted.QuadPrice, inserted.EighthPrice, inserted.GramPrice
         VALUES('${name}', ${potency}, ${ouncePrice}, ${halfPrice}, ${quadPrice}, ${eighthPrice}, ${gramPrice});`;
 
-        const insertedStrain = await db.executeQuery(insertQuery);
+        console.log(insertQuery);
+        let insertedStrain = await db.executeQuery(insertQuery);
         res.status(201).send(insertedStrain[0]);
 
     } catch (err) {
-        console.log("error in POST /review", error);
+        console.log("error in POST /strains", err);
         res.status(500).send();
     }
 });
@@ -282,7 +350,7 @@ app.get('/strains', async (req, res) => {
 
 // get a specific strain
 app.get('/strains/:pk', async (req, res) => {
-    const pk = req.params.pk.replace("'", "").replace(";", "");
+    const pk = req.params.pk;
 
     const query = `SELECT * FROM Strain
     WHERE StrainId = ${pk};`;

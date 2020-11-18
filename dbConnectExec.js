@@ -11,6 +11,7 @@ const config = {
 async function executeQuery(aQuery) {
     let connection = await sql.connect(config);
     let result = await connection.query(aQuery);
+    console.log(result);
 
     return result.recordset;
 }
