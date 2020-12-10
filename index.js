@@ -45,7 +45,9 @@ app.get('/customers', async (req, res) => {
 // account
 app.get('/account', auth, async (req, res) => {
     const user = req.customer;
-    const result = await db.executeQuery(`
+
+    try {
+        const result = await db.executeQuery(`
         SELECT p.PurchaseId, p.DateOfPurchase, p.Amount, s.[Name], s.Potency
         FROM Purchase AS p
         INNER JOIN ShelfStrain AS ss
@@ -53,7 +55,12 @@ app.get('/account', auth, async (req, res) => {
         INNER JOIN Strain AS s ON s.StrainId = ss.StrainId
         WHERE p.CustomerId = ${user.CustomerId};`);
     
-    return result;
+        return res.status(200).send(result);
+    } catch (err) {
+        console.log('error in /account', err);
+        return res.status(500).send();
+    }
+    
     
 });
 
