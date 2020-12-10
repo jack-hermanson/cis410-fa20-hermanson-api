@@ -47,13 +47,18 @@ app.get('/account', auth, async (req, res) => {
     const user = req.customer;
 
     try {
-        const result = await db.executeQuery(`
+        const purchases = await db.executeQuery(`
         SELECT p.PurchaseId, p.DateOfPurchase, p.Amount, s.[Name], s.Potency
         FROM Purchase AS p
         INNER JOIN ShelfStrain AS ss
         ON ss.ShelfStrainId = p.ShelfStrainId
         INNER JOIN Strain AS s ON s.StrainId = ss.StrainId
         WHERE p.CustomerId = ${user.CustomerId};`);
+
+        const result = {
+            user, 
+            purchases
+        };
     
         return res.status(200).send(result);
     } catch (err) {
