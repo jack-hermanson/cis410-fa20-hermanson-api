@@ -17,7 +17,9 @@ app.use(cors());
 
 // TEST
 app.get('/', (req, res) => {
-    return res.status(200).send({message: "Welcome"});
+    return res.status(200).send({
+        message: "Welcome"
+    });
 });
 
 app.get('/hi', (req, res) => {
@@ -38,6 +40,21 @@ app.get('/customers', async (req, res) => {
         });
 
     return res.status(200).send(result);
+});
+
+// account
+app.get('/account', auth, async (req, res) => {
+    const user = req.customer;
+    const result = await db.executeQuery(`
+        SELECT p.PurchaseId, p.DateOfPurchase, p.Amount, s.[Name], s.Potency
+        FROM Purchase AS p
+        INNER JOIN ShelfStrain AS ss
+        ON ss.ShelfStrainId = p.ShelfStrainId
+        INNER JOIN Strain AS s ON s.StrainId = ss.StrainId
+        WHERE p.CustomerId = ${user.CustomerId};`);
+    
+    return result;
+    
 });
 
 // get a specific customer
@@ -178,7 +195,7 @@ app.post('/customers/login', async (req, res) => {
 
 // get user's information
 app.get('/me', auth, (req, res) => {
-    
+
     res.send(req.customer);
 });
 
@@ -283,20 +300,19 @@ app.post('/purchases', auth, (req, res) => {
         const insertQuery = `INSERT INTO Purchase(ShelfStrainId, CustomerId, Amount)
         OUTPUT inserted.PurchaseId, inserted.ShelfStrainId, inserted.CustomerId, inserted.Amount
         VALUES('${shelfStrainId}', '${customerId}', '${amount}');`;
-        
+
         // let insertedPurchase;
-        
+
         db.executeQuery(insertQuery)
             .then(p => res.status(201).send(p[0]))
             .catch(err => {
                 console.log("Error in post /purchases", err);
                 res.status(500).send();
             });
-        
 
-        
-    }
-    catch (err) {
+
+
+    } catch (err) {
         console.log("Error in /purchases", err)
         res.status(500).send();
     }
