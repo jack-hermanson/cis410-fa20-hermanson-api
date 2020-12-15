@@ -381,8 +381,12 @@ app.get('/strains', async (req, res) => {
 app.get('/strains/:pk', async (req, res) => {
     const pk = req.params.pk;
 
-    const query = `SELECT * FROM Strain
-    WHERE StrainId = ${pk};`;
+    const query = `SELECT s.StrainId, s.Name, s.Potency, s.OuncePrice, s.HalfPrice, s.QuadPrice, s.EighthPrice, s.GramPrice, ss.ShelfStrainId
+    FROM Strain AS s
+    INNER JOIN ShelfStrain AS ss
+    ON ss.StrainId = s.StrainId
+    WHERE s.StrainId = ${pk};
+    `;
 
     const result = await db.executeQuery(query)
         .catch(err => {
