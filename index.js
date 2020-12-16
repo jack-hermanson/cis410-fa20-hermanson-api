@@ -366,7 +366,10 @@ app.post('/strains', auth, async (req, res) => {
 
 // get all strains
 app.get('/strains', async (req, res) => {
-    const query = `SELECT * FROM Strain;`;
+    const query = `SELECT s.StrainId, s.Name, s.Potency, s.OuncePrice, s.HalfPrice, s.QuadPrice, s.EighthPrice, s.GramPrice, ss.ShelfStrainId
+    FROM Strain AS s
+    INNER JOIN ShelfStrain AS ss
+    ON ss.StrainId = s.StrainId;`;
 
     const result = await db.executeQuery(query)
         .catch(err => {
